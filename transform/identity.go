@@ -38,9 +38,6 @@ func (t *IdentityTransform) StartElement(node xml.StartElement) (err error) {
 		if p := t.ns.Prefix(node.Name.Space); p != "" {
 			t.w.Write([]byte(p))
 			t.w.Write(colon)
-		} else {
-			t.w.Write([]byte(node.Name.Space))
-			t.w.Write(colon)
 		}
 	}
 	t.w.Write([]byte(node.Name.Local))
@@ -50,9 +47,6 @@ func (t *IdentityTransform) StartElement(node xml.StartElement) (err error) {
 		if attr.Name.Space != "" {
 			if p := t.ns.Prefix(attr.Name.Space); p != "" {
 				t.w.Write([]byte(p))
-				t.w.Write(colon)
-			} else {
-				t.w.Write([]byte(attr.Name.Space))
 				t.w.Write(colon)
 			}
 		}
@@ -75,9 +69,6 @@ func (t *IdentityTransform) EndElement(node xml.EndElement) (err error) {
 	if node.Name.Space != "" {
 		if p := t.ns.Prefix(node.Name.Space); p != "" {
 			t.w.Write([]byte(p))
-			t.w.Write(colon)
-		} else {
-			t.w.Write([]byte(node.Name.Space))
 			t.w.Write(colon)
 		}
 	}
