@@ -14,16 +14,11 @@ type IdentityTransform struct {
 	ns *xmlns.XmlNamespace
 }
 
-func NewIdentityTransform(w io.Writer) (t *IdentityTransform, err error) {
-	var ns *xmlns.XmlNamespace
-	ns = xmlns.NewXmlNamespace()
-
-	t = &IdentityTransform{
+func NewIdentityTransform(w io.Writer) *IdentityTransform {
+	return &IdentityTransform{
 		w:  w,
-		ns: ns,
+		ns: xmlns.NewXmlNamespace(),
 	}
-
-	return
 }
 
 var startStartElement = []byte("<")
