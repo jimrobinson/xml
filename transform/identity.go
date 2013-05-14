@@ -1,7 +1,6 @@
 package transform
 
 import (
-	"bufio"
 	"encoding/xml"
 	"github.com/jimrobinson/xml/xmlbase"
 	"github.com/jimrobinson/xml/xmlns"
@@ -12,19 +11,12 @@ import (
 // that is semantically, but not necessarily syntactically, equivalent
 // to its input.
 type IdentityTransform struct {
-	w    *bufio.Writer
+	w    io.Writer
 	ns   *xmlns.XmlNamespace
 	base *xmlbase.XmlBase
 }
 
 func NewIdentityTransform(w io.Writer, baseUri string) (t *IdentityTransform, err error) {
-	var bufw *bufio.Writer
-	var ok bool
-
-	if bufw, ok = w.(*bufio.Writer); !ok {
-		bufw = bufio.NewWriter(w)
-	}
-
 	var ns *xmlns.XmlNamespace
 	ns = xmlns.NewXmlNamespace()
 
@@ -35,7 +27,7 @@ func NewIdentityTransform(w io.Writer, baseUri string) (t *IdentityTransform, er
 	}
 
 	t = &IdentityTransform{
-		w:    bufw,
+		w:    w,
 		ns:   ns,
 		base: base,
 	}
@@ -46,8 +38,11 @@ func NewIdentityTransform(w io.Writer, baseUri string) (t *IdentityTransform, er
 var startStartElement = []byte("<")
 var endStartElement = []byte(">")
 
-var startAttr = []byte(`='`)
-var endAttr = []byte(`'`)
+var startAttr = []byte("='")
+var endAttr = []byte("'")
+
+var colon = []byte(":")
+var space = []byte(" ")
 
 func (t *IdentityTransform) StartElement(node xml.StartElement) (err error) {
 	t.ns.Push(node)
@@ -59,24 +54,24 @@ func (t *IdentityTransform) StartElement(node xml.StartElement) (err error) {
 	t.w.Write(startStartElement)
 	if node.Name.Space != "" {
 		if p := t.ns.Prefix(node.Name.Space); p != "" {
-			t.w.WriteString(p)
-			t.w.WriteByte(':')
+			t.w.Write([]byte(p))
+			t.w.Write(colon)
 		} else {
-			t.w.WriteString(node.Name.Space)
-			t.w.WriteByte(':')
+			t.w.Write([]byte(node.Name.Space))
+			t.w.Write(colon)
 		}
 	}
-	t.w.WriteString(node.Name.Local)
+	t.w.Write([]byte(node.Name.Local))
 	for i := range node.Attr {
 		attr := node.Attr[i]
-		t.w.WriteByte(' ')
+		t.w.Write(space)
 		if attr.Name.Space != "" {
 			if p := t.ns.Prefix(attr.Name.Space); p != "" {
-				t.w.WriteString(p)
-				t.w.WriteByte(':')
+				t.w.Write([]byte(p))
+				t.w.Write(colon)
 			} else {
-				t.w.WriteString(attr.Name.Space)
-				t.w.WriteByte(':')
+				t.w.Write([]byte(attr.Name.Space))
+				t.w.Write(colon)
 			}
 		}
 		t.w.Write([]byte(attr.Name.Local))
@@ -97,14 +92,14 @@ func (t *IdentityTransform) EndElement(node xml.EndElement) (err error) {
 	t.w.Write(startEndElement)
 	if node.Name.Space != "" {
 		if p := t.ns.Prefix(node.Name.Space); p != "" {
-			t.w.WriteString(p)
-			t.w.WriteByte(':')
+			t.w.Write([]byte(p))
+			t.w.Write(colon)
 		} else {
-			t.w.WriteString(node.Name.Space)
-			t.w.WriteByte(':')
+			t.w.Write([]byte(node.Name.Space))
+			t.w.Write(colon)
 		}
 	}
-	t.w.WriteString(node.Name.Local)
+	t.w.Write([]byte(node.Name.Local))
 	t.w.Write(endEndElement)
 
 	t.base.Pop()
@@ -141,8 +136,8 @@ var endProcInst = []byte("?>")
 
 func (t *IdentityTransform) ProcInst(node xml.ProcInst) (err error) {
 	t.w.Write(startProcInst)
-	t.w.WriteString(node.Target)
-	t.w.WriteByte(' ')
+	t.w.Write([]byte(node.Target))
+	t.w.Write(space)
 	t.w.Write(node.Inst)
 	t.w.Write(endProcInst)
 	return
@@ -153,5 +148,5 @@ func (t *IdentityTransform) Error(err error) (abort bool) {
 }
 
 func (t *IdentityTransform) Flush() (err error) {
-	return t.w.Flush()
+	return nil
 }
