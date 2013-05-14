@@ -61,10 +61,7 @@ func TestIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	x1 := w.String()
-	fmt.Println(x1)
-
-	err = compareXml(strings.NewReader(sampleXml), strings.NewReader(x1))
+	err = compareXml(strings.NewReader(sampleXml), w)
 	if err != nil {
 		t.Fatal(err)
 	}
