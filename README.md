@@ -4,8 +4,23 @@ xml
 A collection of helper libraries for use with
 [encoding/xml](http://golang.org/pkg/encoding/xml/):
 
-- xmlbase: Track current xml:base as an XML document is parsed.
 - transform: Facilitate a streaming transformation of XML
+- xmlbase: Track current xml:base as an XML document is parsed.
+
+If the XML you are processing is already mapped to a go structure, it
+makes more sense to just use the existing
+[Marshal](http://golang.org/pkg/encoding/xml/#Marshal) and
+[Unmarshal](http://golang.org/pkg/encoding/xml/#Unmarshal) facilities
+in the standard xml processing library.
+
+If aren't mapping the XML, if you are dealing with a stream of data
+and you want to introduce small changes to that stream, then transform
+may be of some help.
+
+The transform library sites on top of the standard go xml parser,
+allowing the user to introduce changes using an event handler.  A
+default event handler that provides a basic identity transform is
+provided.
 
 Installation
 ------------
@@ -78,6 +93,7 @@ Example
 	    <body>
 	      <p>
 	        <a href="value">A link</a>
+		<img alt="demo" src="demo.gif" />
 	      </p>
 	    </body>
 	</html>`
@@ -93,7 +109,9 @@ Example
 		}
 	}
 
-produces the output:
+produces the output, almost identical except that xhtml element href
+and src attributes have been fully qualified using the provided base
+URI (http://example.com/):
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
@@ -105,6 +123,7 @@ produces the output:
 	  <body>
 	    <p>
 	      <a href="http://example.com/value">A link</a>
+		<img alt="demo" src="http://example.com/demo.gif" />
 	    </p>
 	  </body>
 	</html>
