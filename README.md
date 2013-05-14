@@ -17,7 +17,7 @@ If aren't mapping the XML, if you are dealing with a stream of data
 and you want to introduce small changes to that stream, then transform
 may be of some help.
 
-The transform library sites on top of the standard go xml parser,
+The transform library sits on top of the standard go xml parser,
 allowing the user to introduce changes using an event handler.  A
 default event handler that provides a basic identity transform is
 provided.
