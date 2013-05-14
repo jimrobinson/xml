@@ -34,7 +34,7 @@ func NewXmlBase(baseuri string) (xb *XmlBase, err error) {
 const xmlBaseSpace = "http://www.w3.org/XML/1998/namespace"
 const xmlBaseLocal = "base"
 
-// Push adds xml:base to the stack
+// Push adds node xml:base to the stack
 func (xb *XmlBase) Push(node xml.StartElement) (err error) {
 	var rawurl string
 	var exists bool
@@ -80,7 +80,7 @@ func (xb *XmlBase) Push(node xml.StartElement) (err error) {
 	return
 }
 
-// Pop removes xml:base from the stack
+// Pop removes the latest xml:base from the stack
 func (xb *XmlBase) Pop() {
 	n := len(xb.baseUri) - 1
 	if n < 0 {
