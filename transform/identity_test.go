@@ -51,7 +51,7 @@ var sampleXml = `<?xml version="1.0" encoding="UTF-8" standalone="no" ?><?xml-st
 
 func TestIdentity(t *testing.T) {
 	w := new(bytes.Buffer)
-	tr, err := NewIdentityTransform(w, "")
+	tr, err := NewIdentityTransform(w)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func BenchmarkIdentity(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		w := new(bytes.Buffer)
-		tr, err := NewIdentityTransform(w, "")
+		tr, err := NewIdentityTransform(w)
 		if err != nil {
 			b.Fatal(err)
 		}

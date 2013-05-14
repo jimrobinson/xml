@@ -2,7 +2,6 @@ package transform
 
 import (
 	"encoding/xml"
-	"github.com/jimrobinson/xml/xmlbase"
 	"github.com/jimrobinson/xml/xmlns"
 	"io"
 )
@@ -11,25 +10,17 @@ import (
 // that is semantically, but not necessarily syntactically, equivalent
 // to its input.
 type IdentityTransform struct {
-	w    io.Writer
-	ns   *xmlns.XmlNamespace
-	base *xmlbase.XmlBase
+	w  io.Writer
+	ns *xmlns.XmlNamespace
 }
 
-func NewIdentityTransform(w io.Writer, baseUri string) (t *IdentityTransform, err error) {
+func NewIdentityTransform(w io.Writer) (t *IdentityTransform, err error) {
 	var ns *xmlns.XmlNamespace
 	ns = xmlns.NewXmlNamespace()
 
-	var base *xmlbase.XmlBase
-	base, err = xmlbase.NewXmlBase(baseUri)
-	if err != nil {
-		return
-	}
-
 	t = &IdentityTransform{
-		w:    w,
-		ns:   ns,
-		base: base,
+		w:  w,
+		ns: ns,
 	}
 
 	return
@@ -46,10 +37,6 @@ var space = []byte(" ")
 
 func (t *IdentityTransform) StartElement(node xml.StartElement) (err error) {
 	t.ns.Push(node)
-	err = t.base.Push(node)
-	if err != nil {
-		return
-	}
 
 	t.w.Write(startStartElement)
 	if node.Name.Space != "" {
@@ -102,7 +89,6 @@ func (t *IdentityTransform) EndElement(node xml.EndElement) (err error) {
 	t.w.Write([]byte(node.Name.Local))
 	t.w.Write(endEndElement)
 
-	t.base.Pop()
 	t.ns.Pop()
 	return
 }
