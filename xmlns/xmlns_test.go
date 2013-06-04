@@ -144,7 +144,7 @@ func checkState(s string, n int, xmlns *XmlNamespace, prefix Prefix, uri Uri, t 
 	}
 }
 
-func BenchmarkParseBasic(b *testing.B) {
+func BenchmarkParseBaseline(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		r := strings.NewReader(feedXml)
@@ -170,7 +170,7 @@ func BenchmarkParseBasic(b *testing.B) {
 	}
 }
 
-func BenchmarkParsePush(b *testing.B) {
+func BenchmarkParseNSPush(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		r := strings.NewReader(feedXml)
@@ -196,7 +196,7 @@ func BenchmarkParsePush(b *testing.B) {
 	}
 }
 
-func BenchmarkParseCheck(b *testing.B) {
+func BenchmarkParseNSCheck(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		r := strings.NewReader(feedXml)
