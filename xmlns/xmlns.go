@@ -35,7 +35,7 @@ func NewXmlNamespace() *XmlNamespace {
 	return &XmlNamespace{}
 }
 
-func copyScope(o, n *Mapping) {
+func copyScope(n, o *Mapping) {
 	for k, v := range o.Prefix {
 		n.Prefix[k] = v
 	}
@@ -81,15 +81,15 @@ func (ns *XmlNamespace) Push(node xml.StartElement) {
 	stack.depth = 1
 	ns.Stack = append(ns.Stack, stack)
 
-	// merge old scope with new stack
+	// new scope by merging old scope with current stack
 	scope := &Mapping{
 		Prefix: make(Prefix),
 		Uri:    make(Uri),
 	}
 	if len(ns.Scope) > 0 {
-		copyScope(ns.Scope[len(ns.Scope)-1], scope)
+		copyScope(scope, ns.Scope[len(ns.Scope)-1])
 	}
-	copyScope(stack, scope)
+	copyScope(scope, stack)
 	ns.Scope = append(ns.Scope, scope)
 }
 
