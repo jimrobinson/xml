@@ -5,9 +5,9 @@ import (
 	"fmt"
 )
 
-const xmlSpace = "http://www.w3.org/XML/1998/namespace"
 const xmlPrefix = "xml"
 const xmlnsPrefix = "xmlns"
+const xmlnsSpace = "http://www.w3.org/XML/1998/namespace"
 
 // XmlNamespace tracks the mapping of XML namespaces in an XML tree.
 // For every xml.StartElement node encountered, pass the node to the
@@ -15,6 +15,7 @@ const xmlnsPrefix = "xmlns"
 // Pop function.
 type XmlNamespace struct {
 	Stack []*Mapping
+	Scope []*Mapping // in-scope namespaces
 }
 
 // Prefix maps a single namespace prefix to a uri
@@ -34,30 +35,62 @@ func NewXmlNamespace() *XmlNamespace {
 	return &XmlNamespace{}
 }
 
+func copyScope(o, n *Mapping) {
+	for k, v := range o.Prefix {
+		n.Prefix[k] = v
+	}
+	for k, v := range o.Uri {
+		n.Uri[k] = v
+	}
+	n.depth = o.depth
+}
+
 // Push adds namespace mappings onto the stack
 func (ns *XmlNamespace) Push(node xml.StartElement) {
-	prefix := make(Prefix)
-	uri := make(Uri)
+
+	// the current element namespace declarations
+	stack := &Mapping{
+		Prefix: make(Prefix),
+		Uri:    make(Uri),
+	}
+
 	for _, attr := range node.Attr {
 		if attr.Name.Space != xmlnsPrefix {
 			continue
 		}
-
-		if _, ok := prefix[attr.Name.Local]; !ok {
-			uri[attr.Value] = append(uri[attr.Value], attr.Name.Local)
+		if _, ok := stack.Prefix[attr.Name.Local]; !ok {
+			stack.Uri[attr.Value] = append(stack.Uri[attr.Value], attr.Name.Local)
 		}
-		prefix[attr.Name.Local] = attr.Value
+		stack.Prefix[attr.Name.Local] = attr.Value
 	}
-	if len(prefix) == 0 {
+	if len(stack.Prefix) == 0 {
+		// no declarations were in this node, increment depth
 		n := len(ns.Stack) - 1
 		if n < 0 {
-			ns.Stack = append(ns.Stack, &Mapping{Prefix: prefix, Uri: uri, depth: 1})
+			stack.depth = 1
+			ns.Stack = append(ns.Stack, stack)
+			ns.Scope = append(ns.Scope, stack)
 			return
 		}
 		ns.Stack[n].depth++
+		ns.Scope[n].depth++
 		return
 	}
-	ns.Stack = append(ns.Stack, &Mapping{Prefix: prefix, Uri: uri, depth: 1})
+
+	// declarations were found, push onto the stack
+	stack.depth = 1
+	ns.Stack = append(ns.Stack, stack)
+
+	// merge old scope with new stack
+	scope := &Mapping{
+		Prefix: make(Prefix),
+		Uri:    make(Uri),
+	}
+	if len(ns.Scope) > 0 {
+		copyScope(ns.Scope[len(ns.Scope)-1], scope)
+	}
+	copyScope(stack, scope)
+	ns.Scope = append(ns.Scope, scope)
 }
 
 // Check examines a node for missing namespace mappings on the node.
@@ -65,13 +98,13 @@ func (ns *XmlNamespace) Push(node xml.StartElement) {
 // Push needs to be called before Check.
 func (ns *XmlNamespace) Check(node xml.StartElement) error {
 	m := ns.InScope()
-	if node.Name.Space != "" && node.Name.Space != xmlPrefix && node.Name.Space != xmlnsPrefix {
+	if node.Name.Space != "" && node.Name.Space != xmlPrefix && node.Name.Space != xmlnsSpace && node.Name.Space != xmlnsPrefix {
 		if _, ok := m.Uri[node.Name.Space]; !ok {
 			return fmt.Errorf("unmapped namespace prefix: %s", node.Name.Space)
 		}
 	}
 	for _, attr := range node.Attr {
-		if attr.Name.Space != "" && attr.Name.Space != xmlPrefix && attr.Name.Space != xmlnsPrefix {
+		if attr.Name.Space != "" && attr.Name.Space != xmlPrefix && attr.Name.Space != xmlnsSpace && attr.Name.Space != xmlnsPrefix {
 			if _, ok := m.Uri[attr.Name.Space]; !ok {
 				return fmt.Errorf("unmapped namespace prefix: %s", attr.Name.Space)
 			}
@@ -90,6 +123,10 @@ func (ns *XmlNamespace) Pop() {
 	if ns.Stack[n].depth <= 0 {
 		ns.Stack = ns.Stack[0:n]
 	}
+	ns.Scope[n].depth--
+	if ns.Scope[n].depth <= 0 {
+		ns.Scope = ns.Scope[0:n]
+	}
 }
 
 // InScope returns a Mapping of namespaces that are currently in scope, or nil
@@ -98,20 +135,7 @@ func (ns *XmlNamespace) InScope() *Mapping {
 	if n < 0 {
 		return nil
 	}
-	scope := &Mapping{
-		Prefix: make(Prefix),
-		Uri:    make(Uri),
-	}
-	for i := n; i >= 0; i-- {
-		for k, v := range ns.Stack[i].Prefix {
-			if _, ok := scope.Prefix[k]; ok {
-				continue
-			}
-			scope.Prefix[k] = v
-			scope.Uri[v] = append(scope.Uri[v], k)
-		}
-	}
-	return scope
+	return ns.Scope[n]
 }
 
 // InScopeXmlns returns a slice of xmlns attributes for namespaces currently in scope.
@@ -132,16 +156,16 @@ func (ns *XmlNamespace) InScopeXmlns() (xmlns []xml.Attr) {
 // prefix mapped in the closest element to the current location will
 // be returned.
 func (ns *XmlNamespace) Prefix(uri string) string {
-	if uri == xmlSpace {
+	if uri == xmlPrefix {
 		return xmlPrefix
 	}
 
-	n := len(ns.Stack) - 1
+	n := len(ns.Scope) - 1
 	if n < 0 {
 		return ""
 	}
 	for i := n; i >= 0; i-- {
-		if prefix, ok := ns.Stack[i].Uri[uri]; ok {
+		if prefix, ok := ns.Scope[i].Uri[uri]; ok {
 			return prefix[0]
 		}
 	}
