@@ -21,6 +21,12 @@ func NewIdentityTransform(w io.Writer) *IdentityTransform {
 	}
 }
 
+const xmlnsPrefix = "xmlns"
+const xmlSpace = "http://www.w3.org/XML/1998/namespace"
+
+var xmlDecl = []byte("xml:")
+var xmlnsDecl = []byte("xmlns:")
+
 var startStartElement = []byte("<")
 var endStartElement = []byte(">")
 
@@ -45,7 +51,11 @@ func (t *IdentityTransform) StartElement(node xml.StartElement) (err error) {
 		attr := node.Attr[i]
 		t.w.Write(space)
 		if attr.Name.Space != "" {
-			if p := t.ns.Prefix(attr.Name.Space); p != "" {
+			if attr.Name.Space == xmlSpace {
+				t.w.Write(xmlDecl)
+			} else if attr.Name.Space == xmlnsPrefix {
+				t.w.Write(xmlnsDecl)
+			} else if p := t.ns.Prefix(attr.Name.Space); p != "" {
 				t.w.Write([]byte(p))
 				t.w.Write(colon)
 			}
