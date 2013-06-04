@@ -76,7 +76,7 @@ func TestPush(t *testing.T) {
 				if err == io.EOF {
 					break
 				}
-				t.Fatal("nsSamples:", i, err)
+				t.Error("nsSamples:", i, err)
 			}
 			switch node := tok.(type) {
 			case xml.StartElement:
@@ -92,15 +92,46 @@ func TestPush(t *testing.T) {
 	}
 }
 
+func TestCheck(t *testing.T) {
+	sample := []string{`<a a:b="c" xmlns:a="b"/>`, `<a a:b="c"/>`}
+	for i := 0; i < len(sample); i++ {
+		xmlns := NewXmlNamespace()
+		dec := xml.NewDecoder(strings.NewReader(sample[i]))
+		for {
+			tok, err := dec.Token()
+			if err != nil {
+				if err == io.EOF {
+					break
+				}
+				t.Error(err)
+			}
+			switch node := tok.(type) {
+			case xml.StartElement:
+				xmlns.Push(node)
+				err = xmlns.Check(node)
+				if i == 0 && err != nil {
+					t.Error("unexpected error returned by xmlns.Check:", err)
+				}
+				if i == 1 && err == nil {
+					t.Error("expected an error to be returned on xmlns.Check")
+				}
+			case xml.EndElement:
+				xmlns.Pop()
+			}
+		}
+	}
+
+}
+
 func checkState(s string, n int, xmlns *XmlNamespace, prefix Prefix, uri Uri, t *testing.T) {
 	realPrefix := xmlns.InScope().Prefix
 	if len(prefix) != len(realPrefix) {
-		t.Fatalf("failed test %s.%d: expected %d namespaces, got %d: expected %v, got %v",
+		t.Errorf("failed test %s.%d: expected %d namespaces, got %d: expected %v, got %v",
 			s, n, len(prefix), len(realPrefix), prefix, realPrefix)
 	}
 	for k, v := range prefix {
 		if realPrefix[k] != v {
-			t.Fatalf("failed test %s.%d: wanted xmlns:%s='%s', got xmlns:%s='%s'",
+			t.Errorf("failed test %s.%d: wanted xmlns:%s='%s', got xmlns:%s='%s'",
 				s, n, k, v, k, realPrefix[k])
 		}
 	}
@@ -108,7 +139,7 @@ func checkState(s string, n int, xmlns *XmlNamespace, prefix Prefix, uri Uri, t 
 	for u, p := range uri {
 		x := xmlns.Prefix(u)
 		if p[0] != x {
-			t.Fatalf("failed test %s.%d: expected xmlns:%s=%s, got xmlns:%s=%s", s, n, p, u, x, u)
+			t.Errorf("failed test %s.%d: expected xmlns:%s=%s, got xmlns:%s=%s", s, n, p, u, x, u)
 		}
 	}
 }

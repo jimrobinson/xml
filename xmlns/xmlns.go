@@ -2,10 +2,12 @@ package xmlns
 
 import (
 	"encoding/xml"
+	"fmt"
 )
 
-const xml_namespace = "http://www.w3.org/XML/1998/namespace"
-const xml_prefix = "xml"
+const xmlSpace = "http://www.w3.org/XML/1998/namespace"
+const xmlPrefix = "xml"
+const xmlnsPrefix = "xmlns"
 
 // XmlNamespace tracks the mapping of XML namespaces in an XML tree.
 // For every xml.StartElement node encountered, pass the node to the
@@ -37,7 +39,7 @@ func (ns *XmlNamespace) Push(node xml.StartElement) {
 	prefix := make(Prefix)
 	uri := make(Uri)
 	for _, attr := range node.Attr {
-		if attr.Name.Space != "xmlns" {
+		if attr.Name.Space != xmlnsPrefix {
 			continue
 		}
 
@@ -56,6 +58,26 @@ func (ns *XmlNamespace) Push(node xml.StartElement) {
 		return
 	}
 	ns.Stack = append(ns.Stack, &Mapping{Prefix: prefix, Uri: uri, depth: 1})
+}
+
+// Check examines a node for missing namespace mappings on the node.
+// If an unmapped namespace is discovered an error will be returned.
+// Push needs to be called before Check.
+func (ns *XmlNamespace) Check(node xml.StartElement) error {
+	m := ns.InScope()
+	if node.Name.Space != "" && node.Name.Space != xmlPrefix && node.Name.Space != xmlnsPrefix {
+		if _, ok := m.Uri[node.Name.Space]; !ok {
+			return fmt.Errorf("unmapped namespace prefix: %s", node.Name.Space)
+		}
+	}
+	for _, attr := range node.Attr {
+		if attr.Name.Space != "" && attr.Name.Space != xmlPrefix && attr.Name.Space != xmlnsPrefix {
+			if _, ok := m.Uri[attr.Name.Space]; !ok {
+				return fmt.Errorf("unmapped namespace prefix: %s", attr.Name.Space)
+			}
+		}
+	}
+	return nil
 }
 
 // Pop removes namespace mappings from the stack
@@ -100,7 +122,7 @@ func (ns *XmlNamespace) InScopeXmlns() (xmlns []xml.Attr) {
 	}
 	xmlns = make([]xml.Attr, len(m.Prefix))
 	for k, v := range m.Prefix {
-		xmlns = append(xmlns, xml.Attr{Name: xml.Name{Space: "xmlns", Local: k}, Value: v})
+		xmlns = append(xmlns, xml.Attr{Name: xml.Name{Space: xmlnsPrefix, Local: k}, Value: v})
 	}
 	return
 }
@@ -110,8 +132,8 @@ func (ns *XmlNamespace) InScopeXmlns() (xmlns []xml.Attr) {
 // prefix mapped in the closest element to the current location will
 // be returned.
 func (ns *XmlNamespace) Prefix(uri string) string {
-	if uri == xml_namespace {
-		return xml_prefix
+	if uri == xmlSpace {
+		return xmlPrefix
 	}
 
 	n := len(ns.Stack) - 1
