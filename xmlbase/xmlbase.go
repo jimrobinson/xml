@@ -11,7 +11,9 @@
 package xmlbase
 
 import (
+	"code.google.com/p/go.net/html"
 	"encoding/xml"
+	"strings"
 )
 
 type XmlBase struct {
@@ -34,7 +36,7 @@ func NewXmlBase(baseuri string) (xb *XmlBase, err error) {
 const xmlBaseSpace = "http://www.w3.org/XML/1998/namespace"
 const xmlBaseLocal = "base"
 
-// Push adds node xml:base to the stack
+// Push adds xml:base from xml.StartElement to the stack
 func (xb *XmlBase) Push(node xml.StartElement) (err error) {
 	var rawurl string
 	var exists bool
@@ -45,7 +47,29 @@ func (xb *XmlBase) Push(node xml.StartElement) (err error) {
 			break
 		}
 	}
+	return xb.push(rawurl, exists)
+}
 
+// PushHTML adds xml:base from html.Token to the stack
+func (xb *XmlBase) PushHTML(tok html.Token) (err error) {
+	var rawurl string
+	var exists bool
+	for _, attr := range tok.Attr {
+		if attr.Key == "xml:base" {
+			rawurl = attr.Val
+			exists = true
+			break
+		}
+		if attr.Namespace == xmlBaseSpace && (strings.HasSuffix(attr.Key, ":base") || attr.Key == "base") {
+			rawurl = attr.Val
+			exists = true
+			break
+		}
+	}
+	return xb.push(rawurl, exists)
+}
+
+func (xb *XmlBase) push(rawurl string, exists bool) (err error) {
 	n := len(xb.baseUri) - 1
 	if !exists {
 		xb.depth[n]++
