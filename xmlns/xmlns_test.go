@@ -1,6 +1,7 @@
 package xmlns
 
 import (
+	"code.google.com/p/go.net/html"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -16,7 +17,7 @@ type XmlNamespaceTest struct {
 	uri    []Uri
 }
 
-var nsSamples = []XmlNamespaceTest{
+var xmlNsSamples = []XmlNamespaceTest{
 	XmlNamespaceTest{
 		`<a><b></b></a>`,
 		[]Prefix{
@@ -30,6 +31,7 @@ var nsSamples = []XmlNamespaceTest{
 	},
 	XmlNamespaceTest{
 		`<a:a
+			xmlns="z"
 			xmlns:a="ns-a"
 			xmlns:b="ns-b"
 			xmlns:c="ns-b">
@@ -46,20 +48,54 @@ var nsSamples = []XmlNamespaceTest{
 			</b:b>
 		</a:a>`,
 		[]Prefix{
-			Prefix{"a": "ns-a", "b": "ns-b", "c": "ns-b"},
-			Prefix{"a": "ns-a", "b": "ns-b", "c": "ns-b", "d": "ns-d", "e": "ns-e"},
-			Prefix{"a": "ns-a", "b": "ns-b", "c": "ns-b", "d": "ns-d", "e": "ns-e"},
-			Prefix{"a": "ns-a", "b": "ns-b", "c": "ns-b", "d": "ns-d", "e": "ns-e"},
-			Prefix{"a": "ns-1", "b": "ns-b", "c": "ns-c", "d": "ns-d", "e": "ns-e"},
-			Prefix{"a": "ns-1", "b": "ns-b", "c": "ns-c", "d": "ns-d", "e": "ns-e"},
+			Prefix{"": "z", "a": "ns-a", "b": "ns-b", "c": "ns-b"},
+			Prefix{"": "z", "a": "ns-a", "b": "ns-b", "c": "ns-b", "d": "ns-d", "e": "ns-e"},
+			Prefix{"": "z", "a": "ns-a", "b": "ns-b", "c": "ns-b", "d": "ns-d", "e": "ns-e"},
+			Prefix{"": "z", "a": "ns-a", "b": "ns-b", "c": "ns-b", "d": "ns-d", "e": "ns-e"},
+			Prefix{"": "z", "a": "ns-1", "b": "ns-b", "c": "ns-c", "d": "ns-d", "e": "ns-e"},
+			Prefix{"": "z", "a": "ns-1", "b": "ns-b", "c": "ns-c", "d": "ns-d", "e": "ns-e"},
 		},
 		[]Uri{
-			Uri{"ns-a": []string{"a"}, "ns-b": []string{"b", "c"}},
-			Uri{"ns-a": []string{"a"}, "ns-b": []string{"b", "c"}, "ns-d": []string{"d"}, "ns-e": []string{"e"}},
-			Uri{"ns-a": []string{"a"}, "ns-b": []string{"b", "c"}, "ns-d": []string{"d"}, "ns-e": []string{"e"}},
-			Uri{"ns-a": []string{"a"}, "ns-b": []string{"b", "c"}, "ns-d": []string{"d"}, "ns-e": []string{"e"}},
-			Uri{"ns-1": []string{"a"}, "ns-b": []string{"b"}, "ns-c": []string{"c"}, "ns-d": []string{"d"}, "ns-e": []string{"e"}},
-			Uri{"ns-1": []string{"a"}, "ns-b": []string{"b"}, "ns-c": []string{"c"}, "ns-d": []string{"d"}, "ns-e": []string{"e"}},
+			Uri{"z": []string{""}, "ns-a": []string{"a"}, "ns-b": []string{"b", "c"}},
+			Uri{"z": []string{""}, "ns-a": []string{"a"}, "ns-b": []string{"b", "c"}, "ns-d": []string{"d"}, "ns-e": []string{"e"}},
+			Uri{"z": []string{""}, "ns-a": []string{"a"}, "ns-b": []string{"b", "c"}, "ns-d": []string{"d"}, "ns-e": []string{"e"}},
+			Uri{"z": []string{""}, "ns-a": []string{"a"}, "ns-b": []string{"b", "c"}, "ns-d": []string{"d"}, "ns-e": []string{"e"}},
+			Uri{"z": []string{""}, "ns-1": []string{"a"}, "ns-b": []string{"b"}, "ns-c": []string{"c"}, "ns-d": []string{"d"}, "ns-e": []string{"e"}},
+			Uri{"z": []string{""}, "ns-1": []string{"a"}, "ns-b": []string{"b"}, "ns-c": []string{"c"}, "ns-d": []string{"d"}, "ns-e": []string{"e"}},
+		},
+	},
+}
+
+var xhtmlNsSamples = []XmlNamespaceTest{
+	XmlNamespaceTest{
+		`<html xmlns="http://www.w3.org/1999/xhtml"/>`,
+		[]Prefix{
+			Prefix{"": "http://www.w3.org/1999/xhtml"},
+		},
+		[]Uri{
+			Uri{"http://www.w3.org/1999/xhtml": []string{""}},
+		},
+	},
+	XmlNamespaceTest{
+		`<html xmlns="http://www.w3.org/1999/xhtml"></html>`,
+		[]Prefix{
+			Prefix{"": "http://www.w3.org/1999/xhtml"},
+		},
+		[]Uri{
+			Uri{"http://www.w3.org/1999/xhtml": []string{""}},
+		},
+	},
+	XmlNamespaceTest{
+		`<x:html xmlns:x="http://www.w3.org/1999/xhtml"><div xmlns="http://www.w3.org/1999/xhtml"><p xmlns:x="a"></p></div></x:html>`,
+		[]Prefix{
+			Prefix{"x": "http://www.w3.org/1999/xhtml"},
+			Prefix{"": "http://www.w3.org/1999/xhtml", "x": "http://www.w3.org/1999/xhtml"},
+			Prefix{"": "http://www.w3.org/1999/xhtml", "x": "a"},
+		},
+		[]Uri{
+			Uri{"http://www.w3.org/1999/xhtml": []string{"x"}},
+			Uri{"http://www.w3.org/1999/xhtml": []string{"x", ""}},
+			Uri{"http://www.w3.org/1999/xhtml": []string{""}, "a": []string{"x"}},
 		},
 	},
 }
@@ -67,25 +103,55 @@ var nsSamples = []XmlNamespaceTest{
 func TestPush(t *testing.T) {
 	xmlns := NewXmlNamespace()
 
-	for i := range nsSamples {
+	for i := range xmlNsSamples {
 		j := 0
-		dec := xml.NewDecoder(strings.NewReader(nsSamples[i].sample))
+		dec := xml.NewDecoder(strings.NewReader(xmlNsSamples[i].sample))
 		for {
 			tok, err := dec.Token()
 			if err != nil {
 				if err == io.EOF {
 					break
 				}
-				t.Error("nsSamples:", i, err)
+				t.Error("xmlNsSamples:", i, err)
 			}
 			switch node := tok.(type) {
 			case xml.StartElement:
 				xmlns.Push(node)
-				checkState("push", j, xmlns, nsSamples[i].prefix[j], nsSamples[i].uri[j], t)
+				checkState("push", j, xmlns, xmlNsSamples[i].prefix[j], xmlNsSamples[i].uri[j], t)
 				j++
 			case xml.EndElement:
 				j--
-				checkState("pop", j, xmlns, nsSamples[i].prefix[j], nsSamples[i].uri[j], t)
+				checkState("pop", j, xmlns, xmlNsSamples[i].prefix[j], xmlNsSamples[i].uri[j], t)
+				xmlns.Pop()
+			}
+		}
+	}
+}
+
+func TestPushHTML(t *testing.T) {
+	xmlns := NewXmlNamespace()
+
+	for i := range xmlNsSamples {
+		j := 0
+		z := html.NewTokenizer(strings.NewReader(xhtmlNsSamples[i].sample))
+		for {
+			tt := z.Next()
+			if tt == html.ErrorToken {
+				err := z.Err()
+				if err == io.EOF {
+					err = nil
+					break
+				}
+				t.Fatal(err)
+			}
+			switch tt {
+			case html.StartTagToken, html.SelfClosingTagToken:
+				xmlns.PushHTML(z.Token())
+				checkState("push", j, xmlns, xhtmlNsSamples[i].prefix[j], xhtmlNsSamples[i].uri[j], t)
+				j++
+			case html.EndTagToken:
+				j--
+				checkState("pop", j, xmlns, xhtmlNsSamples[i].prefix[j], xhtmlNsSamples[i].uri[j], t)
 				xmlns.Pop()
 			}
 		}

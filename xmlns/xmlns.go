@@ -1,8 +1,10 @@
 package xmlns
 
 import (
+	"code.google.com/p/go.net/html"
 	"encoding/xml"
 	"fmt"
+	"strings"
 )
 
 const xmlPrefix = "xml"
@@ -45,31 +47,66 @@ func copyScope(n, o *Mapping) {
 	n.depth = o.depth
 }
 
-// Push adds namespace mappings onto the stack
+// Push adds namespace mappings onto the mapping
 func (ns *XmlNamespace) Push(node xml.StartElement) {
-
-	// the current element namespace declarations
-	stack := &Mapping{
+	mapping := &Mapping{
 		Prefix: make(Prefix),
 		Uri:    make(Uri),
 	}
 
 	for _, attr := range node.Attr {
-		if attr.Name.Space != xmlnsPrefix {
+		if !(attr.Name.Space == "" && attr.Name.Local == "xmlns") && attr.Name.Space != xmlnsPrefix {
 			continue
 		}
-		if _, ok := stack.Prefix[attr.Name.Local]; !ok {
-			stack.Uri[attr.Value] = append(stack.Uri[attr.Value], attr.Name.Local)
+
+		var local string
+		if attr.Name.Local != "xmlns" {
+			local = attr.Name.Local
 		}
-		stack.Prefix[attr.Name.Local] = attr.Value
+
+		if _, ok := mapping.Prefix[local]; !ok {
+			mapping.Uri[attr.Value] = append(mapping.Uri[attr.Value], local)
+		}
+		mapping.Prefix[local] = attr.Value
 	}
-	if len(stack.Prefix) == 0 {
+
+	ns.push(mapping)
+}
+
+// PushHTML adds namespace mappings onto the mapping
+func (ns *XmlNamespace) PushHTML(tok html.Token) {
+	mapping := &Mapping{
+		Prefix: make(Prefix),
+		Uri:    make(Uri),
+	}
+
+	for _, attr := range tok.Attr {
+		if attr.Key != "xmlns" && !(len(attr.Key) > 6 && strings.HasPrefix(attr.Key, "xmlns:")) {
+			continue
+		}
+
+		var local string
+		if len(attr.Key) > 6 {
+			local = attr.Key[6:]
+		}
+
+		if _, ok := mapping.Prefix[local]; !ok {
+			mapping.Uri[attr.Val] = append(mapping.Uri[attr.Val], local)
+		}
+		mapping.Prefix[local] = attr.Val
+	}
+
+	ns.push(mapping)
+}
+
+func (ns *XmlNamespace) push(mapping *Mapping) {
+	if len(mapping.Prefix) == 0 {
 		// no declarations were in this node, increment depth
 		n := len(ns.Stack) - 1
 		if n < 0 {
-			stack.depth = 1
-			ns.Stack = append(ns.Stack, stack)
-			ns.Scope = append(ns.Scope, stack)
+			mapping.depth = 1
+			ns.Stack = append(ns.Stack, mapping)
+			ns.Scope = append(ns.Scope, mapping)
 			return
 		}
 		ns.Stack[n].depth++
@@ -77,11 +114,11 @@ func (ns *XmlNamespace) Push(node xml.StartElement) {
 		return
 	}
 
-	// declarations were found, push onto the stack
-	stack.depth = 1
-	ns.Stack = append(ns.Stack, stack)
+	// declarations were found, push onto the mapping
+	mapping.depth = 1
+	ns.Stack = append(ns.Stack, mapping)
 
-	// new scope by merging old scope with current stack
+	// new scope by merging old scope with current mapping
 	scope := &Mapping{
 		Prefix: make(Prefix),
 		Uri:    make(Uri),
@@ -89,7 +126,7 @@ func (ns *XmlNamespace) Push(node xml.StartElement) {
 	if len(ns.Scope) > 0 {
 		copyScope(scope, ns.Scope[len(ns.Scope)-1])
 	}
-	copyScope(scope, stack)
+	copyScope(scope, mapping)
 	ns.Scope = append(ns.Scope, scope)
 }
 
