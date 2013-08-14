@@ -21,9 +21,9 @@ type XmlBase struct {
 	depth   []int
 }
 
-func NewXmlBase(baseuri string) (xb *XmlBase, err error) {
+func NewXmlBase(baseUri string) (xb *XmlBase, err error) {
 	var u *IRI
-	u, err = NewIRI(baseuri)
+	u, err = NewIRI(baseUri)
 	if err != nil {
 		return
 	}
@@ -107,7 +107,10 @@ func (xb *XmlBase) push(rawurl string, exists bool) (err error) {
 // Pop removes the latest xml:base from the stack
 func (xb *XmlBase) Pop() {
 	n := len(xb.baseUri) - 1
-	if n < 0 {
+	if n <= 0 {
+		if n == 0 && xb.depth[n] > 0 {
+			xb.depth[n]--
+		}
 		return
 	}
 	xb.depth[n]--
