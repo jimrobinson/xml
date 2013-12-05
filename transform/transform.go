@@ -3,6 +3,7 @@ package transform
 import (
 	"encoding/xml"
 	"io"
+	"fmt"
 )
 
 // Transform iterates over an XML document passed in via r, calling
@@ -34,6 +35,8 @@ func Transform(r io.Reader, handler Handler) (err error) {
 				err = handler.Directive(node)
 			case xml.ProcInst:
 				err = handler.ProcInst(node)
+			default:
+				err = fmt.Errorf("unhandled type: %v %v", node, tok)
 			}
 		}
 		if err != nil {
