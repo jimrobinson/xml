@@ -11,15 +11,21 @@ import (
 )
 
 func TestIdentity(t *testing.T) {
-	w := new(bytes.Buffer)
-	err := Transform(strings.NewReader(sampleXml), NewIdentityTransform(w))
-	if err != nil && err != io.EOF {
-		t.Fatal(err)
-	}
-
-	err = compareXml(strings.NewReader(sampleXml), w)
-	if err != nil {
-		t.Fatal(err)
+	for _, v := range xmlTests {
+		w := new(bytes.Buffer)
+		err := Transform(strings.NewReader(v.xml), NewIdentityTransform(w))
+		if err == nil && v.err == nil {
+			err = compareXml(strings.NewReader(v.xml), w)
+			if err != nil {
+				t.Fatal(err)
+			}
+		} else if err != nil && v.err == nil {
+			t.Error("expected a nil error, got %v", err)
+		} else if err == nil && v.err != nil {
+			t.Errorf("expected an error %v got nil", v.err)
+		} else if err.Error() != v.err.Error() {
+			t.Error(err)
+		}
 	}
 }
 
@@ -47,7 +53,7 @@ func BenchmarkIdentity(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		w := new(bytes.Buffer)
-		r := strings.NewReader(sampleXml)
+		r := strings.NewReader(xmlTests[0].xml)
 		b.StartTimer()
 		err := Transform(r, NewIdentityTransform(w))
 		if err != nil {
@@ -56,7 +62,28 @@ func BenchmarkIdentity(b *testing.B) {
 	}
 }
 
-var sampleXml = `<?xml version="1.0" encoding="UTF-8" standalone="no" ?><?xml-stylesheet type="text/xsl" href="/images/Glossary/main.xsl"?><atom:entry xmlns:hw="org.highwire.hpp" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:app="http://www.w3.org/2007/app" xmlns:c="http://schema.highwire.org/Compound" xmlns:l="http://schema.highwire.org/Linking" xmlns:r="http://schema.highwire.org/Revision" xmlns:hwp="http://schema.highwire.org/Journal" xmlns:nlm="http://schema.highwire.org/NLM/Journal" xmlns:x="http://www.w3.org/1999/xhtml">
+type xmlTest struct {
+	descr string
+	err   error
+	xml   string
+}
+
+var xmlTests = []xmlTest{
+	xmlTest{
+		"Empty",
+		nil,
+		"",
+	},
+	xmlTest{
+		"Truncated ",
+		fmt.Errorf("XML syntax error on line 1: unexpected EOF"),
+		`<x/`,
+	},
+	xmlTest{
+		"Atom Entry",
+		nil,
+		`<?xml version="1.0" encoding="UTF-8" standalone="no" ?><?xml-stylesheet type="text/xsl" href="/images/Glossary/main.xsl"?><atom:entry xmlns:hw="org.highwire.hpp" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:app="http://www.w3.org/2007/app" xmlns:c="http://schema.highwire.org/Compound" xmlns:l="http://schema.highwire.org/Linking" xmlns:r="http://schema.highwire.org/Revision" xmlns:hwp="http://schema.highwire.org/Journal" xmlns:nlm="http://schema.highwire.org/NLM/Journal" xmlns:x="http://www.w3.org/1999/xhtml">
+  <!test-xml-directive 1234>
   <atom:id>http://atom.highwire.org/</atom:id>
   <atom:title>A Test: &amp; &apos; &gt; &lt; &quot;</atom:title>
   <atom:updated>2008-05-02T12:45:11.233099-07:00</atom:updated>
@@ -93,4 +120,4 @@ var sampleXml = `<?xml version="1.0" encoding="UTF-8" standalone="no" ?><?xml-st
     </div>
   </atom:content>
   <!-- <test pattern="SECAM" /><test pattern="NTSC" /> -->
-</atom:entry>`
+</atom:entry>`}}
