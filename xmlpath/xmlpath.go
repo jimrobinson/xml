@@ -21,7 +21,11 @@ func NewXmlPath() *XmlPath {
 }
 
 func (xp *XmlPath) Push(node xml.StartElement) {
-	xp.ns.Push(node)
+	xp.PushNS(node, nil)
+}
+
+func (xp *XmlPath) PushNS(node xml.StartElement, ns []xml.Name) {
+	xp.ns.PushNS(node, ns)
 
 	var name string
 	if prefix := xp.ns.Prefix(node.Name.Space); prefix != "" {
