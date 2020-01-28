@@ -78,7 +78,7 @@ func (ns *XmlNamespace) PushNS(node xml.StartElement, override []xml.Name) {
 	if override != nil {
 		for i := range override {
 			space, local := override[i].Space, override[i].Local
-			if v, ok := mapping.Uri[space]; !ok || v[len(v)] != local {
+			if v, ok := mapping.Uri[space]; !ok || v[len(v)-1] != local {
 				mapping.Uri[space] = append(mapping.Uri[space], local)
 			}
 			mapping.Prefix[local] = space
