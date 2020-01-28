@@ -49,6 +49,11 @@ func copyScope(n, o *Mapping) {
 
 // Push adds namespace mappings onto the mapping
 func (ns *XmlNamespace) Push(node xml.StartElement) {
+	ns.PushNS(node, nil)
+}
+
+// Push adds namespace mappings onto the mapping
+func (ns *XmlNamespace) PushNS(node xml.StartElement, override []xml.Name) {
 	mapping := &Mapping{
 		Prefix: make(Prefix),
 		Uri:    make(Uri),
@@ -68,6 +73,16 @@ func (ns *XmlNamespace) Push(node xml.StartElement) {
 			mapping.Uri[attr.Value] = append(mapping.Uri[attr.Value], local)
 		}
 		mapping.Prefix[local] = attr.Value
+	}
+
+	if override != nil {
+		for i := range override {
+			space, local := override[i].Space, override[i].Local
+			if v, ok := mapping.Uri[space]; !ok || v[len(v)] != local {
+				mapping.Uri[space] = append(mapping.Uri[space], local)
+			}
+			mapping.Prefix[local] = space
+		}
 	}
 
 	ns.push(mapping)
